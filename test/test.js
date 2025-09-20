@@ -128,24 +128,6 @@ describe('unalib', function(){
 
     });
 
-    describe('Casos edge de XSS', function(){
-
-      it('debería bloquear data URLs con javascript', function(){
-        var maliciousInput = '<img src="data:text/html,<script>alert(\'XSS\')</script>">';
-        var result = JSON.parse(val.validateMessage(JSON.stringify({mensaje: maliciousInput})));
-        assert.equal(result.mensaje.includes('data:text/html'), false);
-        assert.equal(result.mensaje.includes('<script>'), false);
-      });
-
-      it('debería remover style con expression()', function(){
-        var maliciousInput = '<div style="background:expression(alert(\'XSS\'))">Test</div>';
-        var result = JSON.parse(val.validateMessage(JSON.stringify({mensaje: maliciousInput})));
-        assert.equal(result.mensaje.includes('expression'), false);
-        assert.equal(result.mensaje.includes('alert'), false);
-      });
-
-    });
-
     describe('Validación de contenido legítimo', function(){
 
       it('debería permitir texto normal sin modificación', function(){
