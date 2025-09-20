@@ -79,12 +79,13 @@ module.exports = {
 
       // inicializacion lazy
       var isValid = false;
-      // expresion regular copiada de StackOverflow
-      var re = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})?$/i;
+      // Expresión regular mejorada para YouTube que maneja parámetros adicionales
+      var re = /^https?:\/\/(?:www\.)?(?:youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[&?].*)?$/i;
 
       // validacion Regex
       try {
-        isValid = re.test(url); // Corregido: usar 'url' en lugar de 'phone'
+        isValid = re.test(url);
+        console.log('Testing YouTube URL:', url, 'Result:', isValid); // Debug
       } catch (e) {
         console.log(e);
       } finally {
@@ -120,14 +121,31 @@ module.exports = {
     },
   
     getYTVideoId: function(url){
-  
-      return url.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&]+)/)[1];
+        // Regex mejorado para extraer ID de YouTube con parámetros adicionales
+        var match = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([a-zA-Z0-9_-]{11})/);
+        if (match && match[1]) {
+            console.log('Video ID extraído:', match[1]); // Debug
+            return match[1];
+        }
+        console.log('No se pudo extraer el ID del video'); // Debug
+        return null;
     },
   
     getEmbeddedCode: function (url){
-      var id = this.getYTVideoId(url);
-      var code = '<iframe width="560" height="315" src="https://www.youtube.com/embed/'+id+ '" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
-      return code;
+        try {
+            var id = this.getYTVideoId(url);
+            if (!id) {
+                console.log('Error: No se pudo extraer el ID del video de:', url);
+                return '⚠️ ID de video inválido';
+            }
+            
+            console.log('Creando iframe para video ID:', id); // Debug
+            var code = '<iframe width="560" height="315" src="https://www.youtube.com/embed/'+id+ '" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+            return code;
+        } catch (e) {
+            console.log("Error creating embedded code:", e);
+            return '⚠️ Error al procesar video';
+        }
     },
   
     getImageTag: function(url){
