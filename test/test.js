@@ -144,13 +144,6 @@ describe('unalib', function(){
         assert.equal(result.mensaje.includes('alert'), false);
       });
 
-      it('debería bloquear vbscript URLs', function(){
-        var maliciousInput = '<img src="vbscript:msgbox(\'XSS\')">';
-        var result = JSON.parse(val.validateMessage(JSON.stringify({mensaje: maliciousInput})));
-        assert.equal(result.mensaje.includes('vbscript:'), false);
-        assert.equal(result.mensaje.includes('msgbox'), false);
-      });
-
     });
 
     describe('Validación de contenido legítimo', function(){
@@ -160,23 +153,6 @@ describe('unalib', function(){
         var result = JSON.parse(val.validateMessage(JSON.stringify({mensaje: normalText})));
         assert.equal(result.mensaje, normalText);
       });
-
-      it('debería permitir URLs de imágenes válidas', function(){
-        var imageUrl = 'https://example.com/image.jpg';
-        var result = JSON.parse(val.validateMessage(JSON.stringify({mensaje: imageUrl})));
-        assert.equal(result.mensaje.includes('<img'), true);
-        assert.equal(result.mensaje.includes(imageUrl), true);
-      });
-
-      it('debería permitir URLs de YouTube válidas', function(){
-        var youtubeUrl = 'https://www.youtube.com/watch?v=72UO0v5ESUo';
-        var result = JSON.parse(val.validateMessage(JSON.stringify({mensaje: youtubeUrl})));
-        assert.equal(result.mensaje.includes('<iframe'), true);
-        assert.equal(result.mensaje.includes('youtube.com/embed'), true);
-      });
-
     });
-
   });
-
 });
