@@ -2,6 +2,44 @@
 
 module.exports = {
 
+ 
+    // Función para sanitizar contenido y prevenir XSS
+    sanitizeInput: function(input) {
+        if (!input || typeof input !== 'string') {
+            return '';
+        }
+
+        var sanitized = input;
+
+        // 1. Eliminar etiquetas script completamente
+        sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+        // 2. Eliminar atributos de eventos JavaScript (onclick, onload, etc.)
+        sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+        sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^>\s]+/gi, '');
+
+        // 3. Eliminar javascript: en URLs
+        sanitized = sanitized.replace(/javascript:/gi, '');
+
+        // 4. Eliminar etiquetas potencialmente peligrosas
+        var dangerousTags = ['iframe', 'object', 'embed', 'form', 'input', 'textarea', 'button', 'select'];
+        dangerousTags.forEach(function(tag) {
+            var regex = new RegExp('<' + tag + '\\b[^>]*>', 'gi');
+            sanitized = sanitized.replace(regex, '');
+            var endRegex = new RegExp('</' + tag + '>', 'gi');
+            sanitized = sanitized.replace(endRegex, '');
+        });
+
+        // 5. Codificar caracteres especiales restantes
+        sanitized = sanitized.replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#x27;');
+
+        return sanitized;
+    },
+
+    // ...existing code...
 
     // logica que valida si un telefono esta correcto...
     is_valid_phone: function (phone) {
@@ -22,15 +60,31 @@ module.exports = {
     },
   
     is_valid_url_image: function (url) {
-  
+
       // inicializacion lazy
       var isValid = false;
       // expresion regular copiada de StackOverflow
       var re = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|bmp)/i;
-  
+
       // validacion Regex
       try {
-        isValid = re.test(phone);
+        isValid = re.test(url); // Corregido: usar 'url' en lugar de 'phone'
+      } catch (e) {
+        console.log(e);
+      } finally {
+          return isValid;
+      }
+      // fin del try-catch block
+    },    is_valid_yt_video: function (url) {
+
+      // inicializacion lazy
+      var isValid = false;
+      // expresion regular copiada de StackOverflow
+      var re = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})?$/i;
+
+      // validacion Regex
+      try {
+        isValid = re.test(url); // Corregido: usar 'url' en lugar de 'phone'
       } catch (e) {
         console.log(e);
       } finally {
@@ -38,23 +92,31 @@ module.exports = {
       }
       // fin del try-catch block
     },
-  
-    is_valid_yt_video: function (url) {
-  
-      // inicializacion lazy
+
+    // Nueva función para validar URLs generales
+    is_valid_url: function (url) {
       var isValid = false;
-      // expresion regular copiada de StackOverflow
-      var re = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})?$/i;
-  
-      // validacion Regex
+      // Expresión regular para URLs generales
+      var re = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+
       try {
-        isValid = re.test(phone);
+        isValid = re.test(url);
       } catch (e) {
         console.log(e);
       } finally {
           return isValid;
       }
-      // fin del try-catch block
+    },
+
+    // Función para crear enlace clickeable
+    getLinkTag: function(url){
+      // Agregar https:// si no tiene protocolo
+      var fullUrl = url;
+      if (!url.match(/^https?:\/\//)) {
+        fullUrl = 'https://' + url;
+      }
+      var tag = '<a href="' + fullUrl + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
+      return tag;
     },
   
     getYTVideoId: function(url){
@@ -72,40 +134,57 @@ module.exports = {
       var tag = '<img src="'+url+'" style="max-height: 400px;max-width: 400px;">';
       return tag;
     },
-  
-    validateMessage: function(msg){
-      // Handle invalid input
-      if (!msg || typeof msg !== 'string') {
-        return JSON.stringify({ mensaje: '' });
-      }
+      validateMessage: function(msg){
+        // Handle invalid input
+        if (!msg || typeof msg !== 'string') {
+            return JSON.stringify({ mensaje: '' });
+        }
 
-      try {
-        var obj = JSON.parse(msg);
-  
-      if(this.is_valid_url_image(obj.mensaje)){
-        console.log("Es una imagen!")
-        obj.mensaje = this.getImageTag(obj.mensaje);
-      }
-      else if(this.is_valid_yt_video(obj.mensaje)){
-        console.log("Es un video!")
-        obj.mensaje = this.getEmbeddedCode(obj.mensaje);
-      }
-      else{
-        console.log("Es un texto!")
-      }
-      
-      return JSON.stringify(obj);
-      } catch (e) {
-        console.log('Error processing message:', e);
-        return JSON.stringify({ mensaje: msg }); // Return original message on error
-      }
+        try {
+            var obj = JSON.parse(msg);
+            
+            // PASO 1: Validar que el mensaje existe
+            if (!obj.mensaje || typeof obj.mensaje !== 'string') {
+                return JSON.stringify({ mensaje: '' });
+            }
+
+            // PASO 2: Sanitizar el input ANTES de cualquier procesamiento
+            var originalMessage = obj.mensaje;
+            var sanitizedMessage = this.sanitizeInput(originalMessage);
+
+            // PASO 3: Detectar si había contenido malicioso
+            if (originalMessage !== sanitizedMessage) {
+                console.log("⚠️ Contenido malicioso detectado y removido!");
+                console.log("Original:", originalMessage);
+                console.log("Sanitizado:", sanitizedMessage);
+            }
+
+            // PASO 4: Procesar el mensaje sanitizado según su tipo
+            if(this.is_valid_url_image(sanitizedMessage)){
+                console.log("✅ Es una imagen válida!");
+                obj.mensaje = this.getImageTag(sanitizedMessage);
+            }
+            else if(this.is_valid_yt_video(sanitizedMessage)){
+                console.log("✅ Es un video de YouTube válido!");
+                obj.mensaje = this.getEmbeddedCode(sanitizedMessage);
+            }
+            else if(this.is_valid_url(sanitizedMessage)){
+                console.log("✅ Es una URL válida!");
+                obj.mensaje = this.getLinkTag(sanitizedMessage);
+            }
+            else{
+                console.log("✅ Es texto normal (sanitizado)!");
+                obj.mensaje = sanitizedMessage;
+            }
+            
+            return JSON.stringify(obj);
+            
+        } catch (e) {
+            console.log('❌ Error processing message:', e);
+            // En caso de error, devolver mensaje sanitizado
+            return JSON.stringify({ mensaje: this.sanitizeInput(msg) });
+        }
     }
-  
-  
-  
-    
-    
-  
-  // fin del modulo
+
   };
   
