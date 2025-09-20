@@ -178,6 +178,7 @@ module.exports = {
             }
 
             // PASO 4: Procesar el mensaje sanitizado según su tipo
+            // SOLO se permiten URLs de YouTube e imágenes
             if(this.is_valid_url_image(sanitizedMessage)){
                 console.log("✅ Es una imagen válida!");
                 obj.mensaje = this.getImageTag(sanitizedMessage);
@@ -185,10 +186,6 @@ module.exports = {
             else if(this.is_valid_yt_video(sanitizedMessage)){
                 console.log("✅ Es un video de YouTube válido!");
                 obj.mensaje = this.getEmbeddedCode(sanitizedMessage);
-            }
-            else if(this.is_valid_url(sanitizedMessage)){
-                console.log("✅ Es una URL válida!");
-                obj.mensaje = this.getLinkTag(sanitizedMessage);
             }
             else{
                 console.log("✅ Es texto normal (sanitizado)!");
